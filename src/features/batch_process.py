@@ -3,7 +3,7 @@
 
 """
 
-def batch_process(batch_size=5,
+def batch_process(chunksize=100,
     data_path = "../../data/raw/2015_Green_Taxi_Trip_Data.csv",
     output_path = "../../data/processed/processed.csv",
     shape_file = "../../data/external/nyc.geojson"
@@ -17,6 +17,7 @@ def batch_process(batch_size=5,
     import pandas as pd
     import json
     from shapely.geometry import Point, shape
+    import sqlalchemy as sa
 
     def neighbourhood_finder(lat,lon,neighbourhoods):
         point = Point(lat,lon) 
@@ -25,29 +26,33 @@ def batch_process(batch_size=5,
             if polygon.contains(point):
                 return feature["properties"]["neighborhood"]
             
-    df = pd.read_csv(data_path,nrows=1000)
-    # load GeoJSON file containing sectors
     js = json.load(open(shape_file))
-    df["Pickup_neighbourhood"] = df.apply(
-        lambda x: neighbourhood_finder(
-            x["Pickup_longitude"],
-            x["Pickup_latitude"],
-            js),
-        axis=1)
+    con = sa.create_engine("sqlite:///database.db")
 
-    df["Dropoff_neighbourhood"] = df.apply(
-        lambda x: neighbourhood_finder(
-            x["Dropoff_longitude"],
-            x["Dropoff_latitude"],
-            js),
-        axis=1)
+    for df in pd.read_csv(data_path,chunksize=chunksize):
+        df["Pickup_neighbourhood"] = df.apply(
+            lambda x: neighbourhood_finder(
+                x["Pickup_longitude"],
+                x["Pickup_latitude"],
+                js),
+            axis=1)
+    
+        df["Dropoff_neighbourhood"] = df.apply(
+            lambda x: neighbourhood_finder(
+                x["Dropoff_longitude"],
+                x["Dropoff_latitude"],
+                js),
+            axis=1)
+    
+        df["dropoff_datetime"] = pd.to_datetime(df["dropoff_datetime"])
+        df["pickup_datetime"] =  pd.to_datetime(df["pickup_datetime"])
+    
+        df["Trip_time"] = df["dropoff_datetime"] - df["pickup_datetime"]
+        df["Trip_time"] = df["Trip_time"] / pd.Timedelta('1 minute')
+        
+        df.to_sql(name="table",if_exists="append",con=con)
+    #df.to_csv("test.csv")
 
-    df["dropoff_datetime"] = pd.to_datetime(df["dropoff_datetime"])
-    df["pickup_datetime"] =  pd.to_datetime(df["pickup_datetime"])
-
-    df["Trip_time"] = df["dropoff_datetime"] - df["pickup_datetime"]
-    df["Trip_time"] = df["Trip_time"] / pd.Timedelta('1 minute')
-    df.to_csv("test.csv")
     return df
 
 
