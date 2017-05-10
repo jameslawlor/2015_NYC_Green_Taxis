@@ -1,7 +1,7 @@
-currencyfair
+2015_NYC_Green_Taxis
 ==============================
 
-Currencyfair technical interview project on NYC Green taxi data.
+Analysis, mapping and predictive modelling using 2015 New York Green Taxi data.
 
 Project Organization
 ------------
