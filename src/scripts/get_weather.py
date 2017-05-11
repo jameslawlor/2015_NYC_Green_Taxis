@@ -11,8 +11,7 @@ import numpy as np
 import time
  
 # API key for Wunderground.com
-api_key = "be9640aea2dcc0f7"
-api_key = "27850cba6ce6bd77"
+api_key = API_KEY
 
 # Weather station ID - find on the website
 station_ids = ["KNYC"] 
